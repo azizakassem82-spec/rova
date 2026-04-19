@@ -1,6 +1,5 @@
 {
   "framework": "vite",
-  "buildCommand": "npx convex deploy --cmd 'npm run build'",
   "rewrites": [
     {
       "source": "/(.*)",
