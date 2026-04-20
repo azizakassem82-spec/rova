@@ -19,39 +19,6 @@ declare global {
   }
 }
 
-/** Meta (Facebook) Pixel Loader */
-function loadFbSdk() {
-  if (typeof window === "undefined" || window.fbq) return;
-
-  (function (f: any, b: Document, e: string, v: string, n?: any, t?: any, s?: any) {
-    if (f.fbq) return;
-    n = f.fbq = function () {
-      // @ts-ignore
-      if (n.callMethod) {
-        // @ts-ignore
-        n.callMethod.apply(n, arguments);
-      } else {
-        // @ts-ignore
-        n.queue.push(arguments);
-      }
-    };
-    if (!f._fbq) f._fbq = n;
-    n.push = n;
-    n.loaded = !0;
-    n.version = "2.0";
-    n.queue = [];
-    t = b.createElement(e);
-    t.async = !0;
-    t.src = v;
-    s = b.getElementsByTagName(e)[0];
-    if (s && s.parentNode) {
-      s.parentNode.insertBefore(t, s);
-    } else {
-      b.head.appendChild(t);
-    }
-  })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
-}
-
 /** TikTok Pixel Loader */
 function loadTtSdk() {
   if (typeof window === "undefined" || window.ttq) return;
@@ -143,9 +110,8 @@ export function PixelManager() {
 
   // ---- Facebook Pixels ----
   useEffect(() => {
-    if (isLoading || fbIds.length === 0) return;
-
-    loadFbSdk();
+    if (isLoading || fbIds.length === 0 || typeof window === "undefined") return;
+    if (hasLoadedFb.current) return;
 
     // Re-initialize all pixels and fire PageView
     fbIds.forEach((id) => {
