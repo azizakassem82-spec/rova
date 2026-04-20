@@ -9,10 +9,7 @@ import "./styles.css";
 const router = createRouter({ routeTree });
 
 // Inject Convex URL from env
-const convexUrl = import.meta.env.VITE_CONVEX_URL;
-if (!convexUrl) {
-  throw new Error("VITE_CONVEX_URL is not defined in environment variables");
-}
+const convexUrl = import.meta.env.VITE_CONVEX_URL || "https://sleek-cardinal-373.eu-west-1.convex.cloud";
 const convex = new ConvexReactClient(convexUrl);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
