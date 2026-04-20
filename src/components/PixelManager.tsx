@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-/** Call from anywhere to fire a Facebook Pixel event */
+/** Call from anywhere to fire a Facebook Pixel event on ALL loaded pixels */
 export function fbEvent(event: string, data?: Record<string, unknown>) {
   if (typeof window !== "undefined" && window.fbq) {
     window.fbq("track", event, data);
@@ -27,17 +27,37 @@ export function ttEvent(event: string, data?: Record<string, unknown>) {
   }
 }
 
+/** Build the deduplicated list of all Facebook pixel IDs */
+function getAllFbIds(single: string, arr: string[]): string[] {
+  const all = [single, ...arr].map((s) => s.trim()).filter(Boolean);
+  return [...new Set(all)];
+}
+
+/** Build the deduplicated list of all TikTok pixel IDs */
+function getAllTtIds(single: string, arr: string[]): string[] {
+  const all = [single, ...arr].map((s) => s.trim()).filter(Boolean);
+  return [...new Set(all)];
+}
+
 export function PixelManager() {
   const { settings } = useSettings();
 
-  // ---- Facebook Pixel ----
+  const fbIds = getAllFbIds(settings.facebookPixelId, settings.facebookPixelIds);
+  const ttIds = getAllTtIds(settings.tiktokPixelId, settings.tiktokPixelIds);
+
+  // ---- Facebook Pixels ----
   useEffect(() => {
-    const id = settings.facebookPixelId;
-    if (!id) return;
-    if (document.getElementById("fb-pixel")) return; // already injected
+    if (fbIds.length === 0) return;
+
+    // Remove any stale injected pixels first
+    document.querySelectorAll("[data-fb-pixel]").forEach((el) => el.remove());
 
     const script = document.createElement("script");
-    script.id = "fb-pixel";
+    script.setAttribute("data-fb-pixel", "true");
+
+    // Build init calls for every pixel ID
+    const inits = fbIds.map((id) => `fbq('init', '${id}');`).join("\n");
+
     script.innerHTML = `
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -47,45 +67,48 @@ export function PixelManager() {
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '${id}');
+      ${inits}
       fbq('track', 'PageView');
     `;
     document.head.appendChild(script);
 
     return () => {
-      document.getElementById("fb-pixel")?.remove();
+      document.querySelectorAll("[data-fb-pixel]").forEach((el) => el.remove());
     };
-  }, [settings.facebookPixelId]);
+  }, [fbIds.join(",")]);
 
-  // ---- TikTok Pixel ----
+  // ---- TikTok Pixels ----
   useEffect(() => {
-    const id = settings.tiktokPixelId;
-    if (!id) return;
-    if (document.getElementById("tt-pixel")) return;
+    if (ttIds.length === 0) return;
 
-    const script = document.createElement("script");
-    script.id = "tt-pixel";
-    script.innerHTML = `
-      !function (w, d, t) {
-        w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
-        ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],
-        ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
-        for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
-        ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},
-        ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
-        ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
-        n=document.createElement("script");n.type="text/javascript";n.async=!0;
-        n.src=r+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a)};
-        ttq.load('${id}');
-        ttq.page();
-      }(window, document, 'ttq');
-    `;
-    document.head.appendChild(script);
+    document.querySelectorAll("[data-tt-pixel]").forEach((el) => el.remove());
+
+    // Inject one script per TikTok pixel (TikTok SDK requires separate loads)
+    ttIds.forEach((id) => {
+      const script = document.createElement("script");
+      script.setAttribute("data-tt-pixel", "true");
+      script.innerHTML = `
+        !function (w, d, t) {
+          w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+          ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],
+          ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+          for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+          ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},
+          ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
+          ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
+          n=document.createElement("script");n.type="text/javascript";n.async=!0;
+          n.src=r+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a)};
+          ttq.load('${id}');
+          ttq.page();
+        }(window, document, 'ttq');
+      `;
+      document.head.appendChild(script);
+    });
 
     return () => {
-      document.getElementById("tt-pixel")?.remove();
+      document.querySelectorAll("[data-tt-pixel]").forEach((el) => el.remove());
     };
-  }, [settings.tiktokPixelId]);
+  }, [ttIds.join(",")]);
 
   return null;
 }

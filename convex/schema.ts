@@ -26,8 +26,10 @@ export default defineSchema({
     bannerEnabled: v.boolean(),
     bannerMessage: v.string(),
     facebookPixelId: v.string(),
+    facebookPixelIds: v.optional(v.array(v.string())),
     facebookAccessToken: v.string(),
     tiktokPixelId: v.string(),
+    tiktokPixelIds: v.optional(v.array(v.string())),
     adminPassword: v.optional(v.string()),
     deliveryPrices: v.record(
       v.string(),

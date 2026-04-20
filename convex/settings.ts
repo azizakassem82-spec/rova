@@ -22,8 +22,10 @@ export const getSettings = query({
             bannerEnabled: true,
             bannerMessage: "التوصيل متوفر إلى",
             facebookPixelId: "",
+            facebookPixelIds: [] as string[],
             facebookAccessToken: "",
             tiktokPixelId: "",
+            tiktokPixelIds: [] as string[],
             deliveryPrices: {},
         };
     },
@@ -38,8 +40,10 @@ export const updateSettings = mutation({
         bannerEnabled: v.boolean(),
         bannerMessage: v.string(),
         facebookPixelId: v.string(),
+        facebookPixelIds: v.optional(v.array(v.string())),
         facebookAccessToken: v.string(),
         tiktokPixelId: v.string(),
+        tiktokPixelIds: v.optional(v.array(v.string())),
         deliveryPrices: v.record(
             v.string(),
             v.object({

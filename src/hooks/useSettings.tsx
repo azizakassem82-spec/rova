@@ -10,8 +10,10 @@ export interface AppSettings {
   bannerEnabled: boolean;
   bannerMessage: string;
   facebookPixelId: string;
+  facebookPixelIds: string[];
   facebookAccessToken: string;
   tiktokPixelId: string;
+  tiktokPixelIds: string[];
   deliveryPrices: Record<string, { stop: number | null; dom: number; note?: string }>;
 }
 
@@ -23,8 +25,10 @@ const DEFAULTS: AppSettings = {
   bannerEnabled: true,
   bannerMessage: "التوصيل متوفر إلى",
   facebookPixelId: "",
+  facebookPixelIds: [],
   facebookAccessToken: "",
   tiktokPixelId: "",
+  tiktokPixelIds: [],
   deliveryPrices: {},
 };
 
@@ -37,6 +41,16 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
+/** Normalizes server response: coerces optional arrays to [] to match AppSettings type */
+function normalizeSettings(raw: Record<string, unknown>): AppSettings {
+  return {
+    ...DEFAULTS,
+    ...(raw as Partial<AppSettings>),
+    facebookPixelIds: Array.isArray(raw.facebookPixelIds) ? raw.facebookPixelIds as string[] : [],
+    tiktokPixelIds: Array.isArray(raw.tiktokPixelIds) ? raw.tiktokPixelIds as string[] : [],
+  };
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }): React.ReactElement {
   const serverSettings = useQuery(api.settings.getSettings);
   const updateSettingsMutation = useMutation(api.settings.updateSettings);
@@ -45,14 +59,30 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.R
 
   useEffect(() => {
     if (serverSettings && !localOptimistic) {
-      setLocalOptimistic(serverSettings);
+      setLocalOptimistic(normalizeSettings(serverSettings as Record<string, unknown>));
     }
   }, [serverSettings]);
 
   const update = useCallback((patch: Partial<AppSettings>) => {
-    const next = { ...(localOptimistic || serverSettings || DEFAULTS), ...patch };
+    const base = localOptimistic || (serverSettings ? normalizeSettings(serverSettings as Record<string, unknown>) : DEFAULTS);
+    const next: AppSettings = { ...base, ...patch };
+    
+    // Strip metadata injected by Convex (e.g. _id, _creationTime)
+    // so the mutation validation doesn't reject it as "extra fields"
+    const {
+      unitPrice, oldUnitPrice, googleSheetUrl, googleSheetNotEndedUrl,
+      bannerEnabled, bannerMessage, facebookPixelId, facebookPixelIds,
+      facebookAccessToken, tiktokPixelId, tiktokPixelIds, deliveryPrices
+    } = next;
+
+    const pureSettings = {
+      unitPrice, oldUnitPrice, googleSheetUrl, googleSheetNotEndedUrl,
+      bannerEnabled, bannerMessage, facebookPixelId, facebookPixelIds,
+      facebookAccessToken, tiktokPixelId, tiktokPixelIds, deliveryPrices
+    };
+
     setLocalOptimistic(next);
-    updateSettingsMutation(next).catch(console.error);
+    updateSettingsMutation(pureSettings).catch(console.error);
   }, [localOptimistic, serverSettings, updateSettingsMutation]);
 
   const reset = useCallback(() => {
@@ -60,7 +90,7 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.R
     updateSettingsMutation(DEFAULTS).catch(console.error);
   }, [updateSettingsMutation]);
 
-  const currentSettings = localOptimistic || serverSettings || DEFAULTS;
+  const currentSettings: AppSettings = localOptimistic || (serverSettings ? normalizeSettings(serverSettings as Record<string, unknown>) : DEFAULTS);
 
   return (
     <SettingsContext.Provider value={{ settings: currentSettings, update, reset, isLoading: serverSettings === undefined }}>

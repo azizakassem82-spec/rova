@@ -248,7 +248,7 @@ function SettingsTab() {
   };
 
   const handleReset = () => {
-    const defaults = { unitPrice: 4900, oldUnitPrice: 3900, googleSheetUrl: "", googleSheetNotEndedUrl: "", bannerEnabled: true, bannerMessage: "التوصيل متوفر إلى", facebookPixelId: "", facebookAccessToken: "", tiktokPixelId: "", deliveryPrices: {} as Record<string, { stop: number | null; dom: number; note?: string }> };
+    const defaults: import("@/hooks/useSettings").AppSettings = { unitPrice: 4900, oldUnitPrice: 3900, googleSheetUrl: "", googleSheetNotEndedUrl: "", bannerEnabled: true, bannerMessage: "التوصيل متوفر إلى", facebookPixelId: "", facebookPixelIds: [], facebookAccessToken: "", tiktokPixelId: "", tiktokPixelIds: [], deliveryPrices: {} };
     reset();
     setDraft(defaults);
   };
@@ -442,61 +442,149 @@ function SettingsTab() {
           <Zap className="h-5 w-5 text-primary" />
           ربط البيكسلات (Pixels)
         </h3>
-        <p className="text-xs text-muted-foreground mb-4">أضف معرّف البيكسل وسيتم حقنه تلقائياً في الموقع. يُطلق أحداث PageView عند الدخول و Purchase عند إتمام الطلب.</p>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold flex items-center gap-1.5">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px] font-bold">f</span>
-              Facebook Pixel ID
-            </label>
+        <p className="text-xs text-muted-foreground mb-4">أضف معرّفات البيكسل — يمكنك إضافة عدة بيكسلات في نفس الوقت. جميعها تُحقن تلقائياً وتُطلق نفس الأحداث.</p>
+
+        {/* ─── Facebook ─── */}
+        <div className="space-y-3">
+          <p className="text-sm font-bold flex items-center gap-1.5">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px] font-bold">f</span>
+            Facebook Pixel IDs
+          </p>
+
+          {/* Primary pixel */}
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground w-14 text-center shrink-0">رئيسي</span>
             <input
               type="text"
               value={draft.facebookPixelId}
               onChange={(e) => setDraft({ ...draft, facebookPixelId: e.target.value })}
-              className="w-full rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="1234567890"
               dir="ltr"
             />
-            {draft.facebookPixelId && (
-              <p className="text-xs text-green-600 font-semibold flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Facebook Pixel مفعّل</p>
-            )}
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold flex items-center gap-1.5">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px] font-bold">f</span>
-              Facebook CAPI Access Token (اختياري)
-            </label>
-            <textarea
-              value={draft.facebookAccessToken}
-              onChange={(e) => setDraft({ ...draft, facebookAccessToken: e.target.value })}
-              className="w-full rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
-              placeholder="EAA..."
-              dir="ltr"
-            />
-            <p className="text-[10px] text-muted-foreground">مطلوب لتحسين دقة البيانات عبر Conversion API</p>
-          </div>
-        </div>
-        {/* TikTok */}
-        <div className="space-y-1.5 mt-4">
-          <label className="text-sm font-semibold flex items-center gap-1.5">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-black text-white text-[10px] font-bold">T</span>
-            TikTok Pixel ID
-          </label>
-          <input
-            type="text"
-            value={draft.tiktokPixelId}
-            onChange={(e) => setDraft({ ...draft, tiktokPixelId: e.target.value })}
-            className="w-full rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="ABCDEFGHIJK"
-            dir="ltr"
-          />
-          {draft.tiktokPixelId && (
-            <p className="text-xs text-green-600 font-semibold flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> TikTok Pixel مفعّل</p>
+          {/* Extra pixels */}
+          {(draft.facebookPixelIds || []).map((pid, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <span className="text-xs text-muted-foreground w-14 text-center shrink-0">#{idx + 2}</span>
+              <input
+                type="text"
+                value={pid}
+                onChange={(e) => {
+                  const updated = [...(draft.facebookPixelIds || [])];
+                  updated[idx] = e.target.value;
+                  setDraft({ ...draft, facebookPixelIds: updated });
+                }}
+                className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={`Facebook Pixel ID ${idx + 2}`}
+                dir="ltr"
+              />
+              <button
+                onClick={() => {
+                  const updated = (draft.facebookPixelIds || []).filter((_, i) => i !== idx);
+                  setDraft({ ...draft, facebookPixelIds: updated });
+                }}
+                className="rounded-xl border px-3 py-2.5 text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={() => setDraft({ ...draft, facebookPixelIds: [...(draft.facebookPixelIds || []), ""] })}
+            className="flex items-center gap-1.5 rounded-xl border border-dashed border-blue-400 px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors w-full justify-center"
+          >
+            <span className="text-base leading-none">+</span> إضافة Facebook Pixel آخر
+          </button>
+
+          {/* Active count */}
+          {([draft.facebookPixelId, ...(draft.facebookPixelIds || [])].filter(Boolean).length > 0) && (
+            <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {[draft.facebookPixelId, ...(draft.facebookPixelIds || [])].filter(Boolean).length} Facebook Pixel(s) نشطة
+            </p>
           )}
         </div>
-        <div className="mt-4 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-          <p className="font-semibold text-foreground">الأحداث التي تُطلق تلقائياً:</p>
+
+        {/* Facebook CAPI Token */}
+        <div className="mt-4 space-y-1.5">
+          <label className="text-sm font-semibold flex items-center gap-1.5">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px] font-bold">f</span>
+            Facebook CAPI Access Token (اختياري)
+          </label>
+          <textarea
+            value={draft.facebookAccessToken}
+            onChange={(e) => setDraft({ ...draft, facebookAccessToken: e.target.value })}
+            className="w-full rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+            placeholder="EAA..."
+            dir="ltr"
+          />
+          <p className="text-[10px] text-muted-foreground">مطلوب لتحسين دقة البيانات عبر Conversion API</p>
+        </div>
+
+        {/* ─── TikTok ─── */}
+        <div className="mt-6 space-y-3">
+          <p className="text-sm font-bold flex items-center gap-1.5">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-black text-white text-[10px] font-bold">T</span>
+            TikTok Pixel IDs
+          </p>
+          {/* Primary */}
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground w-14 text-center shrink-0">رئيسي</span>
+            <input
+              type="text"
+              value={draft.tiktokPixelId}
+              onChange={(e) => setDraft({ ...draft, tiktokPixelId: e.target.value })}
+              className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-gray-800"
+              placeholder="ABCDEFGHIJK"
+              dir="ltr"
+            />
+          </div>
+          {/* Extra TikTok pixels */}
+          {(draft.tiktokPixelIds || []).map((tid, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <span className="text-xs text-muted-foreground w-14 text-center shrink-0">#{idx + 2}</span>
+              <input
+                type="text"
+                value={tid}
+                onChange={(e) => {
+                  const updated = [...(draft.tiktokPixelIds || [])];
+                  updated[idx] = e.target.value;
+                  setDraft({ ...draft, tiktokPixelIds: updated });
+                }}
+                className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-gray-800"
+                placeholder={`TikTok Pixel ID ${idx + 2}`}
+                dir="ltr"
+              />
+              <button
+                onClick={() => {
+                  const updated = (draft.tiktokPixelIds || []).filter((_, i) => i !== idx);
+                  setDraft({ ...draft, tiktokPixelIds: updated });
+                }}
+                className="rounded-xl border px-3 py-2.5 text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => setDraft({ ...draft, tiktokPixelIds: [...(draft.tiktokPixelIds || []), ""] })}
+            className="flex items-center gap-1.5 rounded-xl border border-dashed border-gray-400 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors w-full justify-center"
+          >
+            <span className="text-base leading-none">+</span> إضافة TikTok Pixel آخر
+          </button>
+          {([draft.tiktokPixelId, ...(draft.tiktokPixelIds || [])].filter(Boolean).length > 0) && (
+            <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {[draft.tiktokPixelId, ...(draft.tiktokPixelIds || [])].filter(Boolean).length} TikTok Pixel(s) نشطة
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-semibold text-foreground">الأحداث التي تُطلق تلقائياً على كل البيكسلات:</p>
           <p>• <strong>PageView</strong> — عند تحميل الصفحة</p>
           <p>• <strong>InitiateCheckout</strong> — عند البدء بملء نموذج الطلب</p>
           <p>• <strong>Purchase</strong> — عند إتمام الطلب بنجاح</p>
