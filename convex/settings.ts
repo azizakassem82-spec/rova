@@ -11,6 +11,9 @@ export const getSettings = query({
             if (rest.unitPrice === 3200) {
                 rest.unitPrice = 4900;
             }
+            if (!rest.facebookPixelId) {
+                rest.facebookPixelId = "1612297379997971";
+            }
             return rest;
         }
         // Return default settings if not yet defined

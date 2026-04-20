@@ -64,6 +64,9 @@ function normalizeSettings(raw: Record<string, unknown>): AppSettings {
     tiktokPixelIds: Array.isArray(raw.tiktokPixelIds) ? raw.tiktokPixelIds as string[] : [],
     deliveryPrices: pricesMap,
   };
+  if (!norm.facebookPixelId) {
+    norm.facebookPixelId = "1612297379997971";
+  }
   return norm;
 }
 
