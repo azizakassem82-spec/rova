@@ -21,6 +21,9 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 overflow-x-hidden">
+      <div className="bg-red-600 text-white text-center py-4 font-bold text-xl w-full z-50 relative shadow-md">
+        the host is down pls
+      </div>
       <PixelManager />
       <Header />
       <InfiniteBanner />
